@@ -1,0 +1,72 @@
+---
+- name: Create a virtual machine
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    resource_group: <your_resource_group_name>
+    vm_name: <your_vm_name>
+    vm_size: Standard_B1s
+    vm_image_publisher: Canonical
+    vm_image_offer: UbuntuServer
+    vm_image_sku: 18.04-LTS
+    admin_username: <your_admin_username>
+    admin_password: <your_admin_password>
+    subnet_name: <your_subnet_name>
+    vnet_name: <your_vnet_name>
+    nic_name: "{{ vm_name }}-nic"
+    public_ip_name: "{{ vm_name }}-ip"
+  tasks:
+  - name: Create a public IP address
+    azure_rm_publicipaddress:
+      resource_group: "{{ resource_group }}"
+      name: "{{ public_ip_name }}"
+      allocation_method: Static
+      tags:
+        environment: dev
+    register: public_ip
+
+  - name: Create a network security group
+    azure_rm_securitygroup:
+      resource_group: "{{ resource_group }}"
+      name: "{{ vm_name }}-nsg"
+      rules:
+        - name: SSH
+          protocol: Tcp
+          destination_port_range: '22'
+          access: Allow
+          priority: 1001
+          direction: Inbound
+          source_address_prefix: '*'
+      tags:
+        environment: dev
+    register: nsg
+
+  - name: Create a network interface
+    azure_rm_networkinterface:
+      resource_group: "{{ resource_group }}"
+      name: "{{ nic_name }}"
+      virtual_network_name: "{{ vnet_name }}"
+      subnet_name: "{{ subnet_name }}"
+      public_ip_name: "{{ public_ip_name }}"
+      security_group_name: "{{ vm_name }}-nsg"
+      tags:
+        environment: dev
+    register: nic
+
+  - name: Create a virtual machine
+    azure_rm_virtualmachine:
+      resource_group: "{{ resource_group }}"
+      name: "{{ vm_name }}"
+      vm_size: "{{ vm_size }}"
+      admin_username: "{{ admin_username }}"
+      admin_password: "{{ admin_password }}"
+      image:
+        offer: "{{ vm_image_offer }}"
+        publisher: "{{ vm_image_publisher }}"
+        sku: "{{ vm_image_sku }}"
+        version: latest
+      network_interface_names:
+        - "{{ nic_name }}"
+      tags:
+        environment: dev

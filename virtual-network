@@ -1,0 +1,30 @@
+---
+- name: Create a virtual network in Azure
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    virtual_network_name: "my-virtual-network"
+    address_prefixes: "10.0.0.0/16"
+    subnet_name: "my-subnet"
+    subnet_prefix: "10.1.0.0/24"
+    resource_group: "resource"
+    location: "eastus"
+
+  tasks:
+    - name: Create a virtual network
+      azure_rm_virtualnetwork:
+        resource_group: "{{ resource_group }}"
+        name: "{{ virtual_network_name }}"
+        address_prefixes: "{{ address_prefixes }}"
+        location: "{{ location }}"
+        state: present
+
+    - name: Create a subnet
+      azure_rm_subnet:
+        resource_group: "{{ resource_group }}"
+        virtual_network_name: "{{ virtual_network_name }}"
+        name: "{{ subnet_name }}"
+        address_prefix: "{{ subnet_prefix }}"
+        state: present
